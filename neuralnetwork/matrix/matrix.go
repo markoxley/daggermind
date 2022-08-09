@@ -7,6 +7,12 @@ import (
 	"github.com/markoxley/daggermind/neuralnetwork/functions"
 )
 
+type SaveData struct {
+	Cols   uint32    `json:"c"`
+	Rows   uint32    `json:"r"`
+	Values []float64 `json:"v"`
+}
+
 // Matrix holds the matrix data type
 type Matrix struct {
 	cols   uint32
@@ -185,4 +191,27 @@ func (m *Matrix) SetValues(vals []float64) error {
 	}
 	m.values = vals
 	return nil
+}
+
+func (m *Matrix) ToSaveData() *SaveData {
+	sd := SaveData{
+		Cols:   m.cols,
+		Rows:   m.rows,
+		Values: m.values,
+	}
+	return &sd
+}
+
+func FromSaveData(sd *SaveData) (*Matrix, error) {
+	if sd == nil {
+		return nil, errors.New("missing save data")
+	}
+
+	m := Matrix{
+		cols:   sd.Cols,
+		rows:   sd.Rows,
+		values: sd.Values,
+	}
+
+	return &m, nil
 }

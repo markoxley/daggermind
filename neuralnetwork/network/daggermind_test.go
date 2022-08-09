@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/markoxley/daggermind/neuralnetwork/config"
 	"github.com/markoxley/daggermind/neuralnetwork/matrix"
 )
 
@@ -22,7 +23,10 @@ func TestNewNetwork(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.topology, tt.args.learningRate)
+			got, err := New(&config.NetworkConfiguration{
+				Topology:     tt.args.topology,
+				LearningRate: tt.args.learningRate,
+			})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -62,7 +66,7 @@ func TestNetwork_FeedForward(t *testing.T) {
 				biasMatrices:   tt.fields.biasMatrices,
 				learningRate:   tt.fields.learningRate,
 			}
-			if err := s.FeedForward(tt.args.input); (err != nil) != tt.wantErr {
+			if err := s.feedForward(tt.args.input); (err != nil) != tt.wantErr {
 				t.Errorf("Network.FeedForward() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
