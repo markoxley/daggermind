@@ -64,3 +64,7 @@ func (d *Data) RandomTrainingRow() *DataRow {
 func (d *Data) TestData() []*DataRow {
 	return d.testingData
 }
+
+func (d *Data) TrainingCount() int {
+	return len(d.trainingData)
+}

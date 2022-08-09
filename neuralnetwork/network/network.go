@@ -21,6 +21,7 @@ type SaveData struct {
 	WeightMatrices []*matrix.SaveData `json:"w"`
 	BiasMatrices   []*matrix.SaveData `json:"b"`
 	LearningRate   float64            `json:"l"`
+	Functions      uint32             `json:"f"`
 }
 type Network struct {
 	topology       []uint32
@@ -28,6 +29,9 @@ type Network struct {
 	valueMatrices  []*matrix.Matrix
 	biasMatrices   []*matrix.Matrix
 	learningRate   float64
+	functionName   functions.FunctionName
+	activation     functions.NeuralFunction
+	derivative     functions.NeuralFunction
 }
 
 func init() {
@@ -39,6 +43,9 @@ func New(c *config.NetworkConfiguration) (*Network, error) {
 	s := Network{
 		topology:     c.Topology,
 		learningRate: c.LearningRate,
+		functionName: c.Functions,
+		activation:   functions.FunctionList[c.Functions].Activation,
+		derivative:   functions.FunctionList[c.Functions].Derivative,
 	}
 	for i := 0; i < len(s.topology)-1; i++ {
 		wm := matrix.New(s.topology[i+1], s.topology[i])
@@ -72,7 +79,7 @@ func (n *Network) feedForward(input []float64) error {
 		if err != nil {
 			return fmt.Errorf("feed forward error: %v", err)
 		}
-		values = values.ApplyFunction(functions.Sigmoid)
+		values = values.ApplyFunction(n.activation)
 	}
 	n.valueMatrices[len(n.weightMatrices)] = values
 
@@ -95,7 +102,7 @@ func (n *Network) backPropagate(tgtOut []float64) error {
 			return fmt.Errorf("back propagation error: %v", err)
 		}
 
-		dOutputs := n.valueMatrices[i+1].ApplyFunction(functions.Dsigmoid)
+		dOutputs := n.valueMatrices[i+1].ApplyFunction(n.derivative)
 		gradients, err := errMtx.MultiplyElements(dOutputs)
 		if err != nil {
 			return fmt.Errorf("back propagation error: %v", err)
@@ -126,12 +133,14 @@ func (n *Network) getPrediction() []float64 {
 func (n *Network) Train(td *train.Data) (float64, error) {
 	td.Prepare()
 	for i := 0; i < int(td.Iterations); i++ {
-		row := td.RandomTrainingRow()
-		if err := n.feedForward(row.Input); err != nil {
-			return 0, fmt.Errorf("training error: %v", err)
-		}
-		if err := n.backPropagate(row.Ouput); err != nil {
-			return 0, fmt.Errorf("training error: %v", err)
+		for j := 0; j < int(td.TrainingCount()); j++ {
+			row := td.RandomTrainingRow()
+			if err := n.feedForward(row.Input); err != nil {
+				return 0, fmt.Errorf("training error: %v", err)
+			}
+			if err := n.backPropagate(row.Ouput); err != nil {
+				return 0, fmt.Errorf("training error: %v", err)
+			}
 		}
 	}
 	testData := td.TestData()
@@ -164,6 +173,7 @@ func (n *Network) ToSaveData() *SaveData {
 		LearningRate:   n.learningRate,
 		WeightMatrices: make([]*matrix.SaveData, len(n.weightMatrices)),
 		BiasMatrices:   make([]*matrix.SaveData, len(n.biasMatrices)),
+		Functions:      uint32(n.functionName),
 	}
 	for i, wm := range n.weightMatrices {
 		sd.WeightMatrices[i] = wm.ToSaveData()
@@ -237,9 +247,15 @@ func FromSaveData(sd *SaveData) (*Network, error) {
 	for i, t := range sd.Topology {
 		valueMatrices[i] = matrix.New(t, 1)
 	}
+
+	fn := functions.FunctionName(sd.Functions)
+	f := functions.FunctionList[fn]
 	n := Network{
 		topology:       sd.Topology,
 		learningRate:   sd.LearningRate,
+		functionName:   fn,
+		activation:     f.Activation,
+		derivative:     f.Derivative,
 		weightMatrices: weightMatrices,
 		valueMatrices:  valueMatrices,
 		biasMatrices:   biasMatrices,

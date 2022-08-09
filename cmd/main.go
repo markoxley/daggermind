@@ -1,10 +1,12 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
+	"log"
+	"math"
 
 	"github.com/markoxley/daggermind/neuralnetwork/config"
+	"github.com/markoxley/daggermind/neuralnetwork/functions"
 	"github.com/markoxley/daggermind/neuralnetwork/network"
 	"github.com/markoxley/daggermind/neuralnetwork/train"
 )
@@ -12,147 +14,44 @@ import (
 // Run is the main execution point
 func Run() error {
 	config := &config.NetworkConfiguration{
-		Topology:     []uint32{2, 25, 25, 25, 25, 1},
+		Topology:     []uint32{9, 14, 14, 9},
 		LearningRate: 0.1,
+		Functions:    functions.Sigmoid,
 	}
 
 	snn, _ := network.New(config)
 	targetInputs := [][]float64{
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
-		{0, 1},
-		{1, 0},
+		// legs, arms, speaks, woofs, purrs, fur, flies, wings, eggs
+		{2, 2, 1, 0, 0, 1, 0, 0, 0},
+		{4, 0, 0, 1, 0, 1, 0, 0, 0},
+		{4, 0, 0, 0, 1, 1, 0, 0, 0},
+		{2, 0, 0, 0, 0, 0, 1, 2, 1},
+		{4, 0, 0, 0, 0, 0, 0, 0, 1},
+		{2, 0, 0, 0, 0, 1, 1, 2, 0},
+		{8, 0, 0, 0, 0, 0, 0, 0, 1},
+		{6, 0, 0, 0, 0, 0, 1, 4, 1},
+		{2, 2, 0, 0, 0, 1, 0, 0, 0},
 	}
 	targetOutputs := [][]float64{
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
-		{0},
-		{0},
-		{1},
-		{1},
+		// human, dog, cat, bird, lizard, bat, spider, fly, kangaroo
+		{1, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 1, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 1, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 1, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 1, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 1, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 1, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 1, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 1},
 	}
 
+	for i := 0; i < 3; i++ {
+		targetInputs = append(targetInputs, targetInputs...)
+		targetOutputs = append(targetOutputs, targetOutputs...)
+	}
 	td := &train.Data{
 		Split:      0.7,
-		Iterations: 100_000,
+		Iterations: 100000,
 	}
 
 	for i := 0; i < len(targetInputs); i++ {
@@ -167,86 +66,46 @@ func Run() error {
 	fmt.Printf("Error margin: %v\n", errMargin)
 
 	fmt.Println("training completed")
-	fmt.Println("testing Json")
-	j, err := snn.ToJson()
-	if err != nil {
-		return fmt.Errorf("json error: %v", err)
+	animals := []string{"human", "dog", "cat", "bird", "lizard", "bat", "spider", "fly", "kangaroo"}
+	for i, d := range targetInputs[:8] {
+		testData(snn, animals[i], d)
 	}
-
-	nn2, err := network.FromJson(j)
-	if err != nil {
-		return fmt.Errorf("unable to read from json: %v", err)
-	}
-	if nn2 == nil {
-		return errors.New("json resulted in nil")
-	}
-	fmt.Println("network reinstated")
-	j2, err := nn2.ToJson()
-	if err != nil {
-		return fmt.Errorf("json error (second time): %v", err)
-	}
-
-	s1 := string(j)
-	s2 := string(j2)
-
-	if s1 != s2 {
-		return errors.New("networks do not match")
-	}
-
-	r1, err := snn.Predict([]float64{1, 0})
-	if err != nil {
-		return fmt.Errorf("unable to get first prediction: %v", err)
-	}
-
-	r2, err := nn2.Predict([]float64{1, 0})
-	if err != nil {
-		return fmt.Errorf("unable to get second prediction: %v", err)
-	}
-
-	for i := range r1 {
-		if r1[i] != r2[i] {
-			return errors.New("prediction error")
-		}
-	}
-
-	fmt.Println("Testing R/W to file")
-	err = snn.SaveToFile("nn.dat")
-	if err != nil {
-		return fmt.Errorf("saving error: %v", err)
-	}
-
-	nn3, err := network.FromFile("nn.dat")
-	if err != nil {
-		return fmt.Errorf("loading error: %v", err)
-	}
-
-	j3, err := nn3.ToJson()
-	if err != nil {
-		return fmt.Errorf("json error (third time): %v", err)
-	}
-
-	s3 := string(j3)
-	if s3 != s1 {
-		return errors.New("loaded network does not match")
-	}
-
-	r3, err := nn3.Predict([]float64{1, 0})
-	if err != nil {
-		return fmt.Errorf("unable to get third prediction: %v", err)
-	}
-
-	for i := range r1 {
-		if r1[i] != r3[i] {
-			return errors.New("prediction error")
-		}
-	}
-	fmt.Println("All tests successful")
-	// for i, in := range targetInputs {
-	// 	v, err := snn.Predict(in)
-	// 	if err != nil {
-	// 		return fmt.Errorf("prediction error: %v", err)
-	// 	}
-	// 	fmt.Printf("%v -> %v: %v\n", in, targetOutputs[i], v)
-	// }
+	fmt.Println()
+	testData(snn, "Osterich", []float64{2, 0, 0, 0, 0, 0, 0, 2, 1})
+	testData(snn, "Flea", []float64{6, 0, 0, 0, 0, 0, 0, 0, 1})
+	testData(snn, "Siri", []float64{0, 0, 1, 0, 0, 0, 0, 0, 0})
+	testData(snn, "Platypus", []float64{4, 0, 0, 0, 0, 1, 0, 0, 1})
 	return nil
+}
+
+func testData(snn *network.Network, nm string, in []float64) {
+	animals := []string{"human", "dog", "cat", "bird", "lizard", "bat", "spider", "fly"}
+	attributes := []string{"legs", "arms", "speaks", "barks", "purrs", "hair", "flies", "wings"}
+
+	pr, err := snn.Predict(in)
+	if err != nil {
+		log.Fatal(err)
+	}
+	x := -1
+	h := float64(0)
+	for j, s := range pr {
+		if s > h {
+			h = s
+			x = j
+		}
+	}
+	m := ""
+	for i, a := range attributes {
+		if in[i] > 0 {
+			if m != "" {
+				m += ", "
+			}
+			m += fmt.Sprintf("%v (%v)", a, in[i])
+		}
+	}
+	an := animals[x]
+	if h < .8 {
+		an = fmt.Sprintf("Not sure, maybe a %v", an)
+	}
+	fmt.Printf("%v: %v = %v (%v%%)\n", nm, m, an, math.Floor(h*100))
 }
