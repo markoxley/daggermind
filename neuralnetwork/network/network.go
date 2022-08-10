@@ -32,6 +32,7 @@ type Network struct {
 	functionName   functions.FunctionName
 	activation     functions.NeuralFunction
 	derivative     functions.NeuralFunction
+	debug          bool
 }
 
 func init() {
@@ -46,6 +47,7 @@ func New(c *config.NetworkConfiguration) (*Network, error) {
 		functionName: c.Functions,
 		activation:   functions.FunctionList[c.Functions].Activation,
 		derivative:   functions.FunctionList[c.Functions].Derivative,
+		debug:        !c.Quiet,
 	}
 	for i := 0; i < len(s.topology)-1; i++ {
 		wm := matrix.New(s.topology[i+1], s.topology[i])
@@ -131,10 +133,44 @@ func (n *Network) getPrediction() []float64 {
 }
 
 func (n *Network) Train(td *train.Data) (float64, error) {
+	var start time.Time
+	if n.debug {
+		fmt.Println("initialising training...")
+		fmt.Printf("\t%v input neurons\n", n.topology[0])
+		fmt.Printf("\t%v hidden layers\n", len(n.topology)-2)
+		for i := 1; i < len(n.topology)-1; i++ {
+			fmt.Printf("\t\t%v neurons\n", n.topology[i])
+		}
+		fmt.Printf("\t%v output neurons\n", n.topology[len(n.topology)-1])
+		fmt.Println("\npreparing data")
+	}
 	td.Prepare()
+	if n.debug {
+		fmt.Printf("\t%v rows of training data\n", td.TrainingCount())
+		fmt.Printf("\t%v rows of testing data\n", td.TestCount())
+	}
+	var errSum float64
+	if n.debug {
+		start = time.Now()
+		fmt.Printf("\ntraining commencing at %v\n", start)
+	}
+	iterCount := 0
 	for i := 0; i < int(td.Iterations); i++ {
-		for j := 0; j < int(td.TrainingCount()); j++ {
-			row := td.RandomTrainingRow()
+		if n.debug {
+			iterCount++
+			if i%1000 == 0 {
+				if i > 0 && i%80_000 == 0 {
+					fmt.Printf(" %v\n", i)
+				}
+				fmt.Print(".")
+
+			}
+		}
+		for {
+			row := td.NextRow()
+			if row == nil {
+				break
+			}
 			if err := n.feedForward(row.Input); err != nil {
 				return 0, fmt.Errorf("training error: %v", err)
 			}
@@ -142,21 +178,40 @@ func (n *Network) Train(td *train.Data) (float64, error) {
 				return 0, fmt.Errorf("training error: %v", err)
 			}
 		}
-	}
-	testData := td.TestData()
-	var errVal float64
-	for _, test := range testData {
-		answer, err := n.Predict(test.Input)
-		if err != nil {
-			return 0, fmt.Errorf("error testing training data: %v", err)
+		errSum = 0
+		errorWithinTolerence := true
+		for _, errCheck := range td.TestData() {
+			answer, err := n.Predict(errCheck.Input)
+			if err != nil {
+				return 0, fmt.Errorf("error testing error value: %v", err)
+			}
+			var v float64
+			for i, a := range answer {
+				v += math.Pow(errCheck.Ouput[i]-a, 2)
+			}
+			v /= float64(len(answer))
+			if math.Sqrt(v) > td.TargetError {
+				errorWithinTolerence = false
+				break
+			}
+			errSum += v
 		}
-		var v float64
-		for i, a := range answer {
-			v += math.Pow(test.Ouput[i]-a, 2)
+		errSum = math.Sqrt(errSum / float64(len(td.TestData())))
+		if errorWithinTolerence && errSum <= td.TargetError {
+			if n.debug {
+				fmt.Print("\nterminating early. Within tolerance.")
+			}
+			break
 		}
-		errVal += v / float64(len(answer))
 	}
-	return math.Sqrt(errVal / float64(len(testData))), nil
+	if n.debug {
+		stop := time.Now()
+		fmt.Printf("\ntraining complete at %v\n", stop)
+		fmt.Printf("training took %v minutes\n", stop.Sub(start).Minutes())
+		fmt.Printf("\t%v iterations run\n", iterCount)
+		fmt.Printf("\terror margin is %v\n", errSum)
+	}
+	return errSum, nil
 }
 
 func (n *Network) Predict(input []float64) ([]float64, error) {
@@ -209,6 +264,14 @@ func (n *Network) SaveToFile(fp string) error {
 		return fmt.Errorf("error saving data: %v", err)
 	}
 	return os.WriteFile(fp, j, os.ModePerm)
+}
+
+func (n *Network) SetDebug(v bool) {
+	n.debug = v
+}
+
+func (n *Network) Debug() bool {
+	return n.debug
 }
 
 func FromJson(b []byte) (*Network, error) {

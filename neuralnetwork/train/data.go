@@ -16,12 +16,15 @@ type Data struct {
 	Data         []*DataRow
 	Split        float64
 	Iterations   uint32
+	TargetError  float64
+	position     int
 }
 
-func NewData(iterations uint32, split float64) *Data {
+func New(iterations uint32, split float64, errMargin float64) *Data {
 	return &Data{
-		Split:      split,
-		Iterations: iterations,
+		Split:       split,
+		Iterations:  iterations,
+		TargetError: errMargin,
 	}
 }
 
@@ -55,16 +58,31 @@ func (d *Data) Prepare() {
 			d.testingData = append(d.testingData, d.Data[idx])
 		}
 	}
+	d.position = 0
 }
 
 func (d *Data) RandomTrainingRow() *DataRow {
 	return d.trainingData[rand.Intn(len(d.trainingData))]
 }
 
+func (d *Data) NextRow() *DataRow {
+	if d.position >= len(d.trainingData) {
+		d.position = 0
+		return nil
+	}
+	defer func() {
+		d.position++
+	}()
+	return d.trainingData[d.position]
+}
 func (d *Data) TestData() []*DataRow {
 	return d.testingData
 }
 
 func (d *Data) TrainingCount() int {
 	return len(d.trainingData)
+}
+
+func (d *Data) TestCount() int {
+	return len(d.testingData)
 }

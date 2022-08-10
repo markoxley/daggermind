@@ -6,81 +6,78 @@ import (
 	"math"
 
 	"github.com/markoxley/daggermind/neuralnetwork/config"
-	"github.com/markoxley/daggermind/neuralnetwork/functions"
 	"github.com/markoxley/daggermind/neuralnetwork/network"
 	"github.com/markoxley/daggermind/neuralnetwork/train"
 )
 
+var (
+	animals      = []string{"human", "dog", "cat", "bird", "lizard", "bat", "spider", "fly", "kangaroo", "fish", "whale"}
+	attributes   = []string{"legs", "arms", "speaks", "barks", "purrs", "hair", "flies", "wings", "eggs", "pouch", "scales", "swims", "lungs"}
+	targetInputs = [][]float64{
+		// legs, arms, speaks, woofs, purrs, fur, flies, wings, eggs, pouch, scales, swims, lungs
+		/* human    */ {2, 2, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1},
+		/* dog      */ {4, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1},
+		/* cat      */ {4, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1},
+		/* bird     */ {2, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 1},
+		/* lizard   */ {4, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1},
+		/* bat      */ {2, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0, 1},
+		/* spider   */ {8, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+		/* fly      */ {6, 0, 0, 0, 0, 0, 1, 4, 1, 0, 0, 0, 0},
+		/* kangaroo */ {2, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1},
+		/* fish     */ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0},
+		/* whale    */ {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1},
+	}
+	targetOutputs = [][]float64{
+		// human, dog, cat, bird, lizard, bat, spider, fly, kangaroo, fish,whale
+		{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	}
+	animalCount = len(targetInputs)
+)
+
 // Run is the main execution point
 func Run() error {
-	config := &config.NetworkConfiguration{
-		Topology:     []uint32{9, 14, 14, 9},
-		LearningRate: 0.1,
-		Functions:    functions.Sigmoid,
-	}
-
+	config := config.New([]uint32{13, 16, 11})
+	config.Quiet = false
 	snn, _ := network.New(config)
-	targetInputs := [][]float64{
-		// legs, arms, speaks, woofs, purrs, fur, flies, wings, eggs
-		{2, 2, 1, 0, 0, 1, 0, 0, 0},
-		{4, 0, 0, 1, 0, 1, 0, 0, 0},
-		{4, 0, 0, 0, 1, 1, 0, 0, 0},
-		{2, 0, 0, 0, 0, 0, 1, 2, 1},
-		{4, 0, 0, 0, 0, 0, 0, 0, 1},
-		{2, 0, 0, 0, 0, 1, 1, 2, 0},
-		{8, 0, 0, 0, 0, 0, 0, 0, 1},
-		{6, 0, 0, 0, 0, 0, 1, 4, 1},
-		{2, 2, 0, 0, 0, 1, 0, 0, 0},
-	}
-	targetOutputs := [][]float64{
-		// human, dog, cat, bird, lizard, bat, spider, fly, kangaroo
-		{1, 0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 1, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 1, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 1, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 1, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 1, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 1, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 1, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0, 1},
-	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		targetInputs = append(targetInputs, targetInputs...)
 		targetOutputs = append(targetOutputs, targetOutputs...)
 	}
-	td := &train.Data{
-		Split:      0.7,
-		Iterations: 100000,
-	}
+
+	td := train.New(100_000, 0.5, 0.01)
 
 	for i := 0; i < len(targetInputs); i++ {
 		td.AddRow(targetInputs[i], targetOutputs[i])
 	}
 
-	fmt.Println("training started")
-	errMargin, err := snn.Train(td)
-	if err != nil {
+	if _, err := snn.Train(td); err != nil {
 		return fmt.Errorf("training error: %v", err)
 	}
-	fmt.Printf("Error margin: %v\n", errMargin)
 
-	fmt.Println("training completed")
-	animals := []string{"human", "dog", "cat", "bird", "lizard", "bat", "spider", "fly", "kangaroo"}
-	for i, d := range targetInputs[:8] {
+	for i, d := range targetInputs[:animalCount] {
 		testData(snn, animals[i], d)
 	}
+
 	fmt.Println()
-	testData(snn, "Osterich", []float64{2, 0, 0, 0, 0, 0, 0, 2, 1})
-	testData(snn, "Flea", []float64{6, 0, 0, 0, 0, 0, 0, 0, 1})
-	testData(snn, "Siri", []float64{0, 0, 1, 0, 0, 0, 0, 0, 0})
-	testData(snn, "Platypus", []float64{4, 0, 0, 0, 0, 1, 0, 0, 1})
+	testData(snn, "Osterich", []float64{2, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 1})
+	testData(snn, "Flea", []float64{6, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0})
+	testData(snn, "Siri", []float64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	testData(snn, "Platypus", []float64{4, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1})
 	return nil
 }
 
 func testData(snn *network.Network, nm string, in []float64) {
-	animals := []string{"human", "dog", "cat", "bird", "lizard", "bat", "spider", "fly"}
-	attributes := []string{"legs", "arms", "speaks", "barks", "purrs", "hair", "flies", "wings"}
 
 	pr, err := snn.Predict(in)
 	if err != nil {
@@ -103,9 +100,12 @@ func testData(snn *network.Network, nm string, in []float64) {
 			m += fmt.Sprintf("%v (%v)", a, in[i])
 		}
 	}
-	an := animals[x]
-	if h < .8 {
+	an := fmt.Sprintf("%v (%v%%)", animals[x], math.Floor(h*100))
+	if h < .85 {
 		an = fmt.Sprintf("Not sure, maybe a %v", an)
 	}
-	fmt.Printf("%v: %v = %v (%v%%)\n", nm, m, an, math.Floor(h*100))
+	if h < .5 {
+		an = "I have no idea"
+	}
+	fmt.Printf("%v: %v = %v \n", nm, m, an)
 }
