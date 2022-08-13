@@ -39,6 +39,14 @@ func init() {
 	rand.Seed(time.Now().Unix())
 }
 
+func getRandomFloats(sz int) []float64 {
+	r := make([]float64, sz)
+	for i, _ := range r {
+		r[i] = functions.ApplyRandom(0)
+	}
+	return r
+}
+
 // NewSimple creates a new simple neural network
 func New(c *config.NetworkConfiguration) (*Network, error) {
 	s := Network{
@@ -98,12 +106,12 @@ func (n *Network) backPropagate(tgtOut []float64) error {
 	if err != nil {
 		return fmt.Errorf("back propagation error: %v", err)
 	}
+
 	for i := len(n.weightMatrices) - 1; i >= 0; i-- {
 		prevErrors, err := errMtx.Multiply(n.weightMatrices[i].Transpose())
 		if err != nil {
 			return fmt.Errorf("back propagation error: %v", err)
 		}
-
 		dOutputs := n.valueMatrices[i+1].ApplyFunction(n.derivative)
 		gradients, err := errMtx.MultiplyElements(dOutputs)
 		if err != nil {

@@ -186,6 +186,9 @@ func (m *Matrix) Transpose() *Matrix {
 }
 
 func (m *Matrix) SetValues(vals []float64) error {
+	if vals == nil {
+		return errors.New("missing values")
+	}
 	if len(vals) != len(m.values) {
 		return errors.New("size error")
 	}

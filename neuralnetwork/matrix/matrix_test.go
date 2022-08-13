@@ -687,3 +687,118 @@ func TestMatrix_Set(t *testing.T) {
 		})
 	}
 }
+
+func TestNewFromSlice(t *testing.T) {
+	type args struct {
+		slc []float64
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Matrix
+	}{
+		{
+			name: "3 element sequential",
+			args: args{[]float64{1, 2, 3}},
+			want: &Matrix{
+				cols:   3,
+				rows:   1,
+				values: []float64{1, 2, 3},
+			},
+		},
+		{
+			name: "5 element random",
+			args: args{[]float64{3.27, 9.543, 12.549, 10.44541, 2.4321}},
+			want: &Matrix{
+				cols:   5,
+				rows:   1,
+				values: []float64{3.27, 9.543, 12.549, 10.44541, 2.4321},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewFromSlice(tt.args.slc); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewFromSlice() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMatrix_SetValues(t *testing.T) {
+	type fields struct {
+		cols   uint32
+		rows   uint32
+		values []float64
+	}
+	type args struct {
+		vals []float64
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+		want    *Matrix
+	}{
+		{
+			name:    "3x3 - correct size",
+			fields:  fields{3, 3, []float64{0, 0, 0, 0, 0, 0, 0, 0, 0}},
+			args:    args{[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9}},
+			wantErr: false,
+			want: &Matrix{
+				cols:   3,
+				rows:   3,
+				values: []float64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+			},
+		},
+		{
+			name:    "3x3 - too large",
+			fields:  fields{3, 3, []float64{0, 0, 0, 0, 0, 0, 0, 0, 0}},
+			args:    args{[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+			wantErr: true,
+			want: &Matrix{
+				cols:   3,
+				rows:   3,
+				values: []float64{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+		},
+		{
+			name:    "3x3 - too small",
+			fields:  fields{3, 3, []float64{0, 0, 0, 0, 0, 0, 0, 0, 0}},
+			args:    args{[]float64{1, 2, 3, 4, 5, 6, 7, 8}},
+			wantErr: true,
+			want: &Matrix{
+				cols:   3,
+				rows:   3,
+				values: []float64{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+		},
+		{
+			name:    "3x3 - nil",
+			fields:  fields{3, 3, []float64{0, 0, 0, 0, 0, 0, 0, 0, 0}},
+			args:    args{nil},
+			wantErr: true,
+			want: &Matrix{
+				cols:   3,
+				rows:   3,
+				values: []float64{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Matrix{
+				cols:   tt.fields.cols,
+				rows:   tt.fields.rows,
+				values: tt.fields.values,
+			}
+			if err := m.SetValues(tt.args.vals); (err != nil) != tt.wantErr {
+				t.Errorf("Matrix.SetValues() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(m, tt.want) {
+				t.Errorf("Matrix.SetValues() = %v, want %v", m, tt.want)
+			}
+		})
+	}
+}

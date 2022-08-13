@@ -55,7 +55,7 @@ func Run() error {
 		targetOutputs = append(targetOutputs, targetOutputs...)
 	}
 
-	td := train.New(100_000, 0.5, 0.01)
+	td := train.New(10_000, 0.5, 0.01)
 
 	for i := 0; i < len(targetInputs); i++ {
 		td.AddRow(targetInputs[i], targetOutputs[i])
